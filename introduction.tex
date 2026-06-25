@@ -1,0 +1,46 @@
+\section{Introduction}
+\label{sec:intro}
+
+With machine learning models pressing up against the memory and computational limits of current hardware, modern hardware devices are experiencing reduced performance and higher energy consumption \cite{hpvm-hdc}. To address the performance, energy, and accuracy needs of modern workloads, the brain-inspired paradigm \textit{Hyperdimensional Computing (HDC)} \cite{kanerva2009hyperdimensional} is attracting increasing interest. HDC encodes information as \textit{hypervectors}, very high-dimensional vectors made up of thousands of elements. Because HDC operations are lightweight, highly parallelizable, and noise-tolerant, they are particularly well-suited for computations in resource-constrained environments. Consequently, HDC has been employed in a wide range of applications, including natural language processing \cite{rahimi2016robust}, robotics \cite{mitrokhin2019learning}, voice and gesture recognition \cite{imani2017voicehd, rahimi2016hyperdimensional}, emotion recognition \cite{chang2019hyperdimensional}, graph and hypergraph learning \cite{nunes2022graphhd, hyghd}, DNA sequencing \cite{kim2020geniehd}, recommended systems \cite{guo2021hyperrec}, and bio-signal processing \cite{asgarinejad2020detection}.
+
+A key property of HDC is its intrinsic resilience to noise and approximation. Because information is distributed across thousands of dimensions, individual errors in computation or storage barely affect the final result \cite{SurveyHDC}. This stands in sharp contrast to deep neural networks, where even small perturbations in intermediate activations can cascade into large accuracy losses. The error tolerance of HDC opens a rich design space, allowing one to deliberately introduce imprecision through reduced arithmetic precision, skipped loop iterations, cheaper algorithmic variants, or relaxed hardware operating points while still maintaining acceptable inference quality. These approximations, in principle, translate directly into gains in execution time and energy consumption.
+
+The challenge, however, is that the space of possible approximations is combinatorially large. A single HDC application may contain dozens of primitive operations, each offering multiple approximation strategies with continuous or discrete parameters. When the application targets heterogeneous hardware, the space expands further, because each backend exposes its own set of hardware-level knobs such as ADC resolution, write-verify depth, multi-level cell configuration, and analog quantization scale. Manually navigating this space is impractical, as configurations rarely transfer across datasets or backends, and cross-operation interactions are hard to predict without empirical evaluation.
+
+Existing approximation frameworks partially address this problem but fall short in the HDC context. General-purpose approximate computing systems such as EnerJ \cite{enerJ}, ApproxHPVM \cite{approxhpvm}, and ApproxTuner \cite{approxtuner} target deep learning and image processing pipelines and lack the domain-specific compiler support needed to analyze HDC primitives. On the HDC side, MicroHD \cite{microhd} explores a limited hyperparameter space using a Python library without compiler integration, making it unable to exploit hardware-specific approximation knobs or to apply fine-grained, per-operation approximations. Neither class of prior work jointly considers software-level and hardware-level approximation for HDC across heterogeneous targets.
+
+In this work, we present \pname{}, a framework that closes this gap. \pname{} extends the \textit{HPVM-HDC} compiler infrastructure \cite{hpvm-hdc} to automatically identify all HDC primitive invocations within an application, construct the applicable approximation design space per operation, and efficiently search that space subject to a user-specified \textit{quality-of-service (QoS)} constraint. The framework supports retargetable compilation to CPUs, GPUs, and simulated ReRAM- and PCM-based in-memory accelerators~\cite{ReRAMAcc, SpecPCM2024}, and it treats both software transformations  and hardware-level knobs  as first-class dimensions of the search space. To keep search tractable, \pname{} provides mechanisms for developers to prune the space through lightweight source annotations, and it leverages domain knowledge about HDC to eliminate unpromising regions productively.
+
+\vspace{0.05in}
+\noindent
+Overall, this paper makes the following contributions:
+
+\begin{itemize}
+\item  We introduce \pname{}, an auto-tuning system for HDC applications that automates approximation selection to jointly optimize end-to-end performance, energy, and quality of service across heterogeneous hardware targets.
+\item  We provide unified support for software and hardware approximations in HDC, including integration of in-memory accelerator knobs into the compiler-driven tuning loop.
+\item We develop HDC-specific techniques to prune the approximation search space, combining automatic domain-aware pruning with developer-guided annotations, to substantially reduce auto-tuning time. Our pruning reduces the search space by up to \textbf{86}$\times$, enabling discovery of high-quality configurations within minutes. Notably, no single pruning strategy uniformly achieves the highest performance across all applications, underscoring the importance of providing developers with mechanisms to productively guide the search.
+\item We evaluate \pname{} extensively across four HDC benchmarks (HD-Classification, HD-Clustering, RelHD, and HD-Hashtable), multiple datasets, and a range of hardware targets. Our results demonstrate: (i) up to $\textbf{17.25}\times$ speedup on CPUs, $\textbf{15.02}\times$ on GPUs, and $\textbf{4.69}\times$ on SpecPCM while staying within user-specified QoS constraints; and (ii) a $\textbf{3.49}\times$ speedup advantage over the state-of-the-art MicroHD framework through a richer, compiler-driven approximation spaces.
+
+% (iii) consistent tuning behavior across different datasets for the same application; (iv) analysis of how approximation configurations transfer across backends (GPU, CPU, PCM), quantifying the need for re-tuning.}
+% %\vspace{-1em}
+
+% and (v) a thorough characterization of the performance and energy trade-offs exposed by hardware approximation knobs in PCM and ReRAM devices. 
+
+% \rafae{Once we have all the results, we should also elaborate that no one pruning strategy is uniformly achieving the highest performance; different applications converge differently hence why being able to productively guide the pruning is important.}
+
+\end{itemize}
+
+% \begin{itemize}
+% \item An auto-tuning system for HDC applications, automating approximation selection to optimize for end to end application metrics such as (across) performance, energy, and QoS.
+% \item Support for both hardware and software approximations in HDC applications.
+% \item Experimental evaluation of the tuning system for 5 benchmarks (HD-Classification, HD-Clustering, HyperOMS, RelHD, and HD-Hashtable) across multiple datasets and hardware targets (when applicable). Showing:
+% \begin{itemize}
+% 	\item Performance, energy and QoS, tradeoffs for whole-application tuning.
+% 	\item Evaluation of tuning flexibility / consistency across datasets (for same application).
+% 	\item Evaluation of tuning flexibility / consistency across backends (for same application).
+% 		- I.e how do you have to re-tune when moving from GPU, CPU, to PCM
+% 	\item A thorough evaluation of hardware approximation knobs exposed by PCM and ReRam devices for HDC applications. (Perf and energy numbers)
+% 	\item Significant performance gains with marginal loss in QoS.
+% \end{itemize}
+% \item HDC specific techniques to prune the search space to reduce auto-tuning time. Both automatic and developer guided.
+% \end{itemize}

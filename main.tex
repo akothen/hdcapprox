@@ -1,0 +1,259 @@
+\documentclass[sigplan, nonacm]{acmart}
+
+ 
+%%
+%\documentclass[manuscript,screen,review]{acmart}
+%\documentclass[acmsmall,screen]{acmart}
+%\documentclass[acmlarge]{acmart}
+%%
+%% \BibTeX command to typeset BibTeX logo in the docs
+%\AtBeginDocument{\providecommand\BibTeX{{Bib\TeX}}}
+
+\let\Bbbk\relax
+
+%\AtBeginDocument{% \providecommand\BibTeX{{%Bib\TeX}}}
+
+\setcopyright{none}
+\settopmatter{printfolios=true}
+\settopmatter{printacmref=false}
+\acmDOI{}
+\acmISBN{}
+\acmConference[Preprint]{Preprint}{}{2026}{}
+\copyrightyear{}
+\acmYear{}
+%%%%%% -- OUR COMMANDS -- %%%%%%%%
+\usepackage{array}
+\usepackage{amsmath,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{minted}
+\usepackage{listings}
+\usepackage[utf8]{inputenc}
+\usepackage{enumitem}
+\usepackage{multirow}
+\usepackage{listings}
+\usepackage{wrapfig}
+\usepackage{adjustbox}
+
+\newcommand{\pname}{\texttt{ApproxHDC}}
+\newcommand{\rafae}[1]{\textcolor{red}{Rafae: #1}}
+\newcommand{\mahbod}[1]{\textcolor{teal}{Mahbod: #1}}
+\newcommand{\xavier}[1]{\textcolor{blue}{Xavier: #1}}
+\newcommand{\ak}[1]{\textcolor{blue}{AK: #1}}
+
+\definecolor{keyword}{RGB}{127, 0, 170}    % purple for types
+\definecolor{comment}{RGB}{106, 115, 125}  % gray for comments
+\definecolor{function}{RGB}{0, 55, 120}    % dark blue for functions
+\definecolor{number}{RGB}{0, 128, 0}       % green for numbers
+\definecolor{bg}{RGB}{246, 248, 250}       % light gray background
+
+\lstdefinelanguage{HDCpp}{
+  morekeywords={hypervector, hypermatrix, int, void},
+  morekeywords=[2]{__hetero_hdc_matmul, __hetero_hdc_hamming_distance,
+    __hetero_hdc_red_perf, __hetero_hdc_arg_min},
+  morecomment=[l]{//},
+  morestring=[b]",
+}
+
+\lstset{
+  language=HDCpp,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\bfseries\color{keyword},
+  keywordstyle=[2]\color{function},
+  commentstyle=\itshape\color{comment},
+  stringstyle=\color{number},
+  numbers=left,
+  numberstyle=\tiny\color{comment},
+  numbersep=8pt,
+  breaklines=true,
+  frame=non,
+  rulecolor=\color{gray!30},
+  backgroundcolor=\color{bg},
+  tabsize=4,
+  columns=flexible,
+  showstringspaces=false,
+  literate={<}{{\textcolor{black}{<}}}1
+           {>}{{\textcolor{black}{>}}}1
+           {=}{{\textcolor{black}{=}}}1,
+}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.64,0.08,0.08}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{bg},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\lstset{emph={%  
+    hypervector, hypermatrix%
+    },emphstyle={\color{red}\bfseries}%
+}%
+
+
+
+\begin{document}
+
+\title{Compiler-Driven Approximation Tuning for Hyperdimensional Computing}
+
+
+\author{Xavier Routh}
+\affiliation{%
+  \institution{University of Illinois Urbana-Champaign}
+  \city{Urbana}
+  \state{IL}
+  \country{USA}
+}
+\email{xrouth2@illinois.edu}
+
+\author{Abdul Rafae Noor}
+\affiliation{%
+  \institution{University of Illinois Urbana-Champaign}
+  \city{Urbana}
+  \state{IL}
+  \country{USA}
+}
+\email{arnoor2@illinois.edu}
+
+\author{Akash Kothari}
+\affiliation{%
+  \institution{University of Illinois Urbana-Champaign}
+  \city{Urbana}
+  \state{IL}
+  \country{USA}
+}
+\email{akashk4@illinois.edu}
+
+\author{Zheyu Li}
+\affiliation{%
+  \institution{University of California San Diego}
+  \city{La Jolla}
+  \state{CA}
+  \country{USA}
+}
+\email{zhl178@ucsd.edu}
+
+\author{Mahbod Afarin}
+\affiliation{%
+  \institution{University of California San Diego}
+  \city{La Jolla}
+  \state{CA}
+  \country{USA}
+}
+\email{mafarin@ucsd.edu}
+
+\author{Tajana Rosing}
+\affiliation{%
+  \institution{University of California San Diego}
+  \city{La Jolla}
+  \state{CA}
+  \country{USA}
+}
+\email{tajana@ucsd.edu}
+
+\author{Vikram Adve}
+\affiliation{%
+  \institution{University of Illinois Urbana-Champaign}
+  \city{Urbana}
+  \state{IL}
+  \country{USA}
+}
+\email{vadve@illinois.edu}
+
+%%%%%% -- PAPER CONTENT STARTS-- %%%%%%%%
+
+\begin{abstract}
+
+As Moore’s law reaches its physical and economic limits, domain-specific approaches are increasingly employed to accelerate machine learning workloads. Hyperdimensional Computing (HDC) represents one such emerging paradigm, offering an alternative to conventional deep learning techniques. Rooted in cognitive models of computation, HDC is designed bottom-up with hardware efficiency as a first-class objective. Consequently, HDC workloads map naturally to heterogeneous hardware platforms, including CPUs, GPUs, and FPGAs, as well as emerging in-memory computing technologies such as Resistive RAM (ReRAM) and Phase-Change Memory (PCM). The intrinsic tolerance of HDC algorithms to noise and approximation enables substantial performance gains with minimal loss in inference quality. In this work, we introduce \textit{ApproxHDC}, a framework for automated identification and application of domain-specific approximations in HDC workloads. ApproxHDC extends the HPVM-HDC compiler infrastructure to enable retargetable compilation across diverse hardware backends, including CPUs, GPUs, and simulated ReRAM and PCM-based accelerators. The space of possible software and hardware approximations in HDC is exponentially large, making exhaustive exploration intractable; ApproxHDC employs efficient search and analysis techniques to navigate this space and identify high-impact approximations. We further integrate hardware-level approximation mechanisms within the HDC accelerator to demonstrate ApproxHDC’s ability to exploit both software and hardware approximations. Experimental evaluation shows that ApproxHDC achieves up to $\textbf{17.25}\times$ speedup on CPUs, $\textbf{15.02}\times$ on GPUs, and $\textbf{4.69}\times$ on SpecPCM while staying within user-specified quality-of-service constraints, outperforming the state-of-the-art MicroHD framework by $\textbf{3.49}\times$. HDC-specific search space pruning reduces the design space by up to \textbf{86} orders of magnitude, enabling discovery of high-quality configurations within minutes.
+
+\end{abstract}
+%%
+%% The code below is generated by the tool at http://dl.acm.org/ccs.cfm.
+%% Please copy and paste the code instead of the example below.
+%%
+%\begin{CCSXML}
+%<ccs2012>
+% <concept>
+%  <concept_id>00000000.0000000.0000000</concept_id>
+%  <concept_desc>Do Not Use This Code, Generate the Correct Terms for Your Paper</concept_desc>
+%  <concept_significance>500</concept_significance>
+% </concept>
+% <concept>
+%  %<concept_id>00000000.00000000.00000000</concept_id>
+%  <concept_desc>Do Not Use This Code, Generate the Correct Terms for Your Paper</concept_desc>
+%  <concept_significance>300</concept_significance>
+% </concept>
+% <concept>
+%  %<concept_id>00000000.00000000.00000000</concept_id>
+%  <concept_desc>Do Not Use This Code, Generate the Correct Terms for Your Paper</concept_desc>
+%  <concept_significance>100</concept_significance>
+% </concept>
+% <concept>
+ % <concept_id>00000000.00000000.00000000</concept_id>
+%  <concept_desc>Do Not Use This Code, Generate the Correct Terms for Your Paper</concept_desc>
+%  <concept_significance>100</concept_significance>
+% </concept>
+%</ccs2012>
+%\end{CCSXML}
+
+%\ccsdesc[500]{Do Not Use This Code~Generate the Correct Terms for Your Paper}
+%\ccsdesc[300]{Do Not Use This Code~Generate the Correct Terms for Your Paper}
+%\ccsdesc{Do Not Use This Code~Generate the Correct Terms for Your Paper}
+%\ccsdesc[100]{Do Not Use This Code~Generate the Correct Terms for Your Paper}
+
+%%
+%% Keywords. The author(s) should pick words that accurately describe
+%% the work being presented. Separate the keywords with commas.
+% \keywords{Compilers, Hyperdimensional Computing, Heterogeneous Systems, Approximate Computing}
+
+\maketitle
+
+
+\input{introduction}
+\input{background}
+\input{design}
+\input{approximations}
+\input{evaluation}
+\input{relwork}
+\input{conclusion}
+
+% Acknowledgements only in accepted papers! 
+\begin{comment}
+\begin{acks}
+   This document is derived from previous conferences, in particular MICRO 2013, ASPLOS 2015, MICRO 2015-2025, ISCA 2025, as well as SIGARCH/TCCA's Recommended Best Practices for the Conference Reviewing Process. 
+\end{acks}
+\end{comment}
+
+
+%%%%%%% -- PAPER CONTENT ENDS -- %%%%%%%%
+
+%%
+%% The next two lines define the bibliography style to be used, and
+%% the bibliography file.
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{refs}
+
+\end{document}
+\endinput
+%%
+%% End of file `sample-sigconf.tex'.

@@ -1,0 +1,100 @@
+\section{Approximation Tuning System}
+\label{sec:approx-tuning-system}
+
+
+\subsection{ApproxHDC Implementation}
+\label{sec:approxhdc-impl}
+We implement \pname{} in Python for ease of development and integration, in contrast to the HPVM-HDC compiler, which is implemented in C++. \pname{} maintains built-in knowledge of the available HDC primitives and their corresponding approximation transformations in HPVM-HDC. This design choice is essential, as not all approximations are applicable to every HDC operation. For instance, the reduction perforation approximation applies only to reduction-style computations such as cosine similarity.
+During operation, \pname{} parses the list of HDC primitives extracted from an HDC++ application (as shown in Listing~\ref{lst:approx_interface}) and determines the set of applicable approximations for each primitive instance. %\xavier{we only use opentuner, does this just raise questions about why we didn't compare to PyATF?: } \ak{Let's remove references to ATF. Opentuner is a pretty popular state-of-the-art autotuner, so people won't question our choice of autotuner.} 
+The implementation uses OpenTuner~\cite{opentuner} as the underlying auto-tuning framework. For each tuner, \pname{} automatically constructs the corresponding tuning classes, defining the appropriate parameter spaces and objective functions to guide the search process.
+
+\subsection{Approximation Transformations}
+\label{sec:hdc-approximations}
+\pname{} provides support for automated approximation tuning of various software and novel hardware approximation for HDC. In this section, we describe the specific approximation transformations which are supported. 
+
+
+\textbf{Reduction Perforation.} Beyond point-wise operations, many HDC primitives perform reduction computations of various kinds. These reductions commonly appear in encoding algorithms such as random projection, which involves matrix–vector dot-product operations, as well as in inference stages, where similarity or dissimilarity metrics are computed through reductions. Owing to the inherent error resilience of HDC algorithms, such computations are amenable to approximation techniques like loop perforation. In reduction perforation, the compiler lowers HDC primitives into loop nests and modifies the reduction-axis loop to skip iterations at regular intervals, defined by a specified stride, rather than iterating over the entire domain. HDC++ exposes this approximation via the \textcolor{blue!41!black}{\texttt{\_\_hetero\_hdc\_red\_perf}} annotation, which accepts three parameters—starting offset, ending offset, and stride—to describe the perforation behavior. For similarity and dissimilarity computations, the resultant values are used as-is; for operations such as matrix–vector dot products, the results are scaled appropriately to compensate for the skipped iterations. 
+
+Due to the diverse ways in which HDC applications are structured, not all reduction operations are equally amenable to perforation. Applying reduction perforation during encoding stages often degrades the quality-of-service (QoS) by producing poorly defined class hypervectors. Moreover, the benefit of perforation is highly application-dependent, as it is influenced by factors such as the encoding dimensionality as well as other approximations within the application. In many cases, performance gains without significant QoS degradation are achieved only beyond an application-specific crossover point, where the reduction size and approximation tolerance align favorably. 
+
+\textbf{Automatic Binarization.} 
+% \xavier{this is just an optimization on top of algorithmic choice?}
+In the inference stage of HDC, a widely used strategy involves computing the Hamming distance to measure dissimilarity between the input hypervector and a set of class hypervectors. 
+% The class hypervector with the lowest dissimilarity is then selected as the predicted label. For hypervectors with integer element types, the Hamming distance is computed by comparing corresponding elements between the input and class vectors, incrementing the distance by one for each mismatch.
+A common performance-oriented implementation of Hamming distance in HDC involves preprocessing hypervectors to the $\{+1, -1\}$ representation. This transformation not only improves the QoS for certain applications but also enables use of more hardware-efficient data types. The two possible values can be compactly encoded using packed single-bit representations, with each hypervector element stored as a single bit. This compact format enables highly efficient computation using bitwise operations such as \texttt{xor} and \texttt{popcount}.
+% while the final distance values are accumulated using wider integer types.
+Moreover, this representation significantly reduces data movement between heterogeneous compute devices such as CPU and GPU. HPVM-HDC automates this inter-procedural transformation using a compiler flag, rewriting both the computation and data movement to leverage the packed representation. 
+
+
+\textbf{Encoding Dimensionality.} 
+A key hyperparameter in HDC is the encoding dimensionality, which determines the size of the feature vectors forming the core representation of the algorithm. Increasing this dimensionality can improve the QoS by enabling the model to capture more diverse and discriminative features. However, higher dimensionality also significantly increases computational cost—often quadratically in encoding algorithms and linearly in inference algorithms. This growth not only amplifies overall computation but also intensifies data movement across heterogeneous hardware (e.g., between CPUs and GPUs), leading to additional performance and energy-efficiency degradations.
+
+\textbf{Element Type Representation.}
+% \xavier{Need to rework, we only support int32 and fp32, and also binarization. Something about quantization maybe?}
+A parameter closely related to the encoding dimensionality is the element type representation used for hypervectors and their associated computations. Hypervectors may be represented using integer data types (8, 16, 32, or 64-bit) or floating-point types (FP16 or FP32), with computations mapped to the corresponding low-level hardware instructions for each data type. In general, HDC training requires higher-precision representations such as floating-point types to ensure stability and accuracy during learning. In contrast, inference computations can often be safely approximated by projecting class and feature hypervectors onto lower-precision integer types. At the extreme, 
+%automatic binarization 
+We can represent hypervectors using 1-bit integer types, enabling highly efficient bitwise operations while significantly reducing computational and memory overhead.
+
+\textbf{Algorithmic Choice.} 
+An HDC application typically comprises computations that can be categorized into three main stages: encoding, training, and inference. Each stage can be realized using multiple algorithmic variants, each offering different trade-offs between performance and QoS. To capture this variability, we incorporate algorithmic choice as an approximation transformation within \pname{}. For instance, HDC inference can be implemented using the computationally expensive cosine similarity metric or the more hardware-efficient hamming distance computation. Similarly, as an example, encoding can be performed using random projection~\cite{rahimi2016robust} or ID-based encoding~\cite{imani2017voicehd}. While \pname{} provides a set of built-in algorithmic choices for common operations, developers can easily extend the framework by defining their own algorithmic variants to suit specific application needs.
+
+\textbf{In-Memory Accelerator Approximations.} In-memory analog accelerators naturally expose multiple approximation knobs stemming from device non-idealities, limited conversion precision, \& stochastic programming behavior. HDC is highly resilient to such noise: prior work shows that even with substantial device-level errors, analog HDC systems retain near–software-equivalent accuracy while achieving large efficiency gains. This robustness enables aggressive approximation in ReRAM/PCM accelerators. We summarize the hardware knobs \& ApproxHDC’s modeling approach:
+
+%\begin{enumerate}[label=\roman*)]
+%\item
+\noindent
+\underline{\textit{( I ) ADC Resolution}:} Analog operations (e.g., current summed dot products) are digitized via ADCs. Lowering ADC bit precision reduces latency and power but increases quantization noise. For example, a 4-bit ADC replaces 256 levels with 16 levels, improving conversion speed at the cost of larger rounding error. \pname{} models this by quantizing the ideal analog value to the target bit-width and adjusting latency/energy accordingly. Accuracy degrades only when quantization noise dominates the HDC similarity signal.\\
+    %\item 
+\underline{\textit{( II ) Write–Verify Cycles}:} ReRAM and PCM writes rely on iterative program-and-verify steps to reach the target resistance. Fewer verify cycles reduce write latency and energy but increase the chance of under or over-programming, introducing variability in stored values. Our simulator models this by adding resistance noise proportional to the skipped verify steps. These write inaccuracies propagate to analog operations, but HDC's binary and majority computations tolerate noise. Thus, reducing write-verify cycles serves as a practical approximation knob that trades small accuracy loss for significant gains in performance and energy.\\
+    %\item 
+\underline{\textit{( III ) Analog Quantization Scale}:} Another approximation knob is the quantization scale, which determines how analog outputs are mapped to digital values. By adjusting the sensing range and gain, designers can use a tighter scale that clips or compresses large analog sums for faster, lower-precision sensing, or a wider scale that preserves detail but requires higher-precision ADCs or slower reads. Our simulator models these effects by scaling and capping analog outputs to mimic saturation or reduced sensitivity. The quantization scale thus becomes an accuracy–efficiency lever, and \pname{} varies this parameter to evaluate its impact on sensing energy, performance, and overall HDC accuracy.\\
+    %\item 
+\underline{\textit{(IV) Multi-Level Cell (MLC) Bits}:} ReRAM and PCM support multi-level cells (MLC) that encode multiple resistance states and thus store several bits per device, increasing density and parallelism. However, higher MLC levels sharply degrade reliability: distinguishing many resistance states introduces significant analog noise and drift, with prior PCM measurements showing more than 10\% error at 3 bits per cell even after write-verify, while 1–2 bits per cell remain far more stable~\cite{SpecPCM2024}. As a result, MLC becomes an approximation knob that trades accuracy for efficiency. Our model reflects this by scaling error probability with bits per cell and incorporating the associated performance benefits (for instance, 2 bits per cell can provide roughly 2× throughput). \pname{} then sweeps these configurations to identify Pareto points, where HDC’s intrinsic noise tolerance often makes 2 bits per cell an attractive balance of accuracy and speed.
+%\end{enumerate}
+
+These approximation knobs are exposed through a unified interface in both the compiler and simulator. As in SpecPCM, where the ISA sets bits-per-cell, ADC precision, and verify cycles, our HPVM-HDC backend provides intrinsic hooks for \pname{} to specify these parameters before kernel launch. The simulator then applies calibrated ReRAM/PCM models to inject the corresponding latency, energy, and error behavior. Treating each knob as a dimension in the search space, \pname{} sweeps ADC resolution, MLC level, and write-verify depth to identify Pareto points using end-to-end accuracy and modeled performance/energy. This enables clear trade-off analysis, such as small accuracy loss for meaningful energy savings when lowering ADC bits, versus steeper accuracy penalties of more aggressive MLC configurations.
+
+
+
+
+
+
+% \rafae{@Mahbod could you please explain the PCM/ReRAM simulator parameters}
+% ADC/Write verify cycles, quantization scales, mlc bits etc.
+
+%\rafae{@Xavier add a code listing showing the generated simulator API with the approximate knobs specified}
+
+ \textbf{Custom Application Specific Parameters.} 
+For generality, \pname{} allows application developers to introduce custom, application specific tuning parameters that may not be covered by the existing approximation techniques. Unlike the automatically inferred approximations, these parameters must be explicitly specified by the user. They can represent either integer-valued parameters or enumeration parameters that select among a predefined set of configuration options. This flexibility enables developers to extend the tuning space to include domain-specific controls relevant to their particular HDC application. For example, HD-Clustering, HD-Classification, and RelHD all expose \texttt{TRAIN\_ITERATIONS} as an integer knob governing the number of retraining epochs. HD-HashTable exposes \texttt{KMERS\_PER\_HV}, which controls how many k-mers are packed into each hash-table bucket; smaller values produce more buckets with sparser hypervector sums, changing both the encoding cost and the query-time dot-product distribution. Micro-HD-Classification exposes \texttt{N\_LEVELS}, the number of discrete levels in Level-ID encoding, which controls the quantization granularity applied to continuous input features before they are mapped to hypervectors. RelHD exposes \texttt{RHO\_SHIFT}, which enables a circular left-shift permutation on the level-2 node hypervectors between graph propagation steps; this breaks symmetry between the two aggregation levels so that the similarity computation can distinguish their contributions.
+
+\vspace{-.2 in}
+\subsection{Configurable Approximation Tuning Space}
+\label{sec:hdc-no-approx}
+By default, the tuning system constructs the approximation space over all HDC operations present in an application. A single application may include dozens of distinct HDC primitives, each contributing to the overall computational behavior. 
+% \rafae{we should collect the number of HDC ops across applications}.
+However, application developers often possess application-specific insight into which operations can tolerate approximation without significantly degrading the QoS metric. While \pname{}’s design could accommodate heuristics for automatically identifying such operations, we instead provide a lightweight, user-driven mechanism for approximation space pruning via source code annotations. Developers can mark specific HDC primitive operations with the \textcolor{blue!41!black}{\texttt{\_\_hetero\_hdc\_no\_approx}} directive to instruct \pname{} to exclude them from approximation. For convenience, users may also annotate entire HPVM-HDC subgraphs with this directive, thereby excluding all enclosed operations from the approximation search space.
+This allows users to focus on specific crucial stages within their HDC++ application without needing to perform intrusive changes to the HPVM-HDC compiler or the \pname{} Tuning System. 
+%\xavier{where should this next sentence go:?} 
+%In almost all of our applications, we use the \texttt{\_\_hetero\_hdc\_no\_approx} directive to 'protect' the Hypervector encoding stage from approximation. Encoding is typically the most sensitive stage of HDC applications, and typically a global reduction in encoding dimensionality has the same effect as approximating encoding.
+Nearly all the applications we evaluate \pname{} on require this annotation, specifically to prevent the application specific encoding stages from being approximated. Encoding is typically the most sensitive stage of HDC applications to approximation. 
+% \xavier{add discussion of redperf pruning here also?}
+
+
+\begin{table*}[t]
+  \centering
+  \small
+  \caption{Summary of HDC++ applications used to evaluate \pname{}. All benchmarks are taken from the HPVM-HDC~\cite{hpvm-hdc} suite. Each application defines a domain-specific quality-of-service (QoS) metric that serves as the optimization constraint during automated approximation tuning.}
+  \vspace{-0.1 in}
+  \label{tab:HDC-workloads}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Application} & \textbf{Workload} & \textbf{QoS Metric} \\
+    \midrule
+    HD-Classification \cite{HD2FPGA}           & Classification using HDC encoding and similarity & Inference Accuracy            \\
+    HD-Clustering \cite{HD2FPGA, hdclustering}  & K-means clustering using HDC                     & Normalized Mutual Information  \\
+    RelHD \cite{relhd}                          & GNN learning and data relationship analysis           &   Inference Accuracy\\
+    HD-HashTable \cite{biohd}                   & Genome sequence search for long reads
+sequencing  using HD hashing           &   Inference Accuracy              \\
+    \bottomrule
+  \end{tabular}
+\end{table*}

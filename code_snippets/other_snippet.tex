@@ -1,0 +1,13 @@
+hypervector<617> input_features = ...;
+hypermatrix<2048, 617> rp_matrix = ...;
+hypermatrix<26, 2048>  clusters = ...;
+// Encode via random projection
+hypervector<2048> encoded_data =
+    __hetero_hdc_matmul(input_features, rp_matrix);
+// Compute Hamming distance to all clusters
+hypervector<26> dists =
+    __hetero_hdc_hamming_distance(encoded_data, clusters);
+// Approximate: use only first 1024 dimensions
+__hetero_hdc_red_perf(dists, 0.0, 0.5, 1);
+// Select nearest cluster
+int label = __hetero_hdc_arg_min(dists);
