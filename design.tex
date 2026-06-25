@@ -1,7 +1,8 @@
 \section{Design}
 \begin{figure*}
     \centering
-    \includegraphics[width=0.75\linewidth]{figures/ApproxHDC Workflow.pdf}
+    \includegraphics[width=0.75\linewidth]{figures/ApproxHDC_Workflow.pdf}
+    \Description{Diagram of the ApproxHDC workflow: HDC++ application and QoS evaluator feed into HDC Primitive Identification, then the ApproxHDC Tuning System explores software and hardware approximation configurations, and finally the HDC Approximation Application pass inserts source-level annotations before compilation and execution.}
     \caption{Overview of the \pname{} workflow. Given HDC applications written in HDC++ along with an application-specific quality-of-service (QoS) evaluator, \pname{} first extracts the set of HDC primitives used in the program. It then performs efficient autotuning to explore approximation choices at both the global and per-operation levels. Finally, \pname{} applies the selected approximations via automatically generated source-level annotations, ensuring that the specified QoS constraints are satisfied. The search space considered by \pname{} spans both software- and hardware-level approximations.}
     \label{fig:overall-workflow}
 \end{figure*}

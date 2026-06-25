@@ -30,7 +30,7 @@ To demonstrate the effectiveness of the HDC-specific techniques to prune the app
     %\item 
 \vspace{0.1 in}
 \noindent
-\underline{\textbf{(1)} \textbf{Full RedPerf}:} all three reduction perforation knobs are exposed—start, stride, and end—alongside encoding and data-type knobs. This is the most expressive condition but introduces the largest search space.
+\underline{\textbf{(1)} \textbf{Full RedPerf}:} all three reduction perforation knobs are exposed---start, stride, and end---alongside encoding and data-type knobs. This is the most expressive condition but introduces the largest search space.
 
 \noindent
 \underline{\textbf{(2)} \textbf{End-only + no approx hint enabled}:} only the end (extent) knob is tunable; start and stride are fixed at their baseline values. This substantially reduces the search space while retaining the most impactful approximation lever (truncating the reduction). 
@@ -49,6 +49,7 @@ We evaluate the pruning effectiveness by running ApproxHDC for each configuratio
 \begin{figure*}[t!]
     \centering
     \includegraphics[width=\linewidth]{evaluation/redperf_matrix.pdf}
+    \Description{Matrix of line plots showing running-best speedup over tuning time for all applications under four reduction perforation pruning conditions, split by GPU (top row) and CPU (bottom row).}
     \vspace{-0.3in}
     \caption{Maximum speedup achieved over the 3-hour tuning budget for all four
              reduction perforation pruning conditions across all applications and GPU top row, CPU bottom row. Each curve shows the
@@ -136,6 +137,7 @@ The $3.49\times$ gap is a result of ApproxHDC's more expressive search space: th
 \begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{evaluation/microhd_vs_approxhdc_relative.pdf}
+    \Description{Line plot comparing ApproxHDC running-best speedup over tuning time against MicroHD's fixed speedup baseline for the classification benchmark, showing ApproxHDC surpassing MicroHD within approximately 5 minutes.}
     \vspace{-0.3in}
     \caption{
     %\xavier{Beats MicroHD at T=4m41s, MicroHD takes 4m13s} 
@@ -226,6 +228,7 @@ Full RedPerf + hint & $10^{47}$ & $10^{25}$ & N/A       & N/A       \\
 \begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{evaluation/hd_sim_classification_speedup.pdf}
+    \Description{Line plot of running-best speedup over tuning time for ApproxHDC hardware approximation on the SpecPCM Phase Change Memory simulator, reaching over 4.5x speedup within 45 minutes.}
     \vspace{-0.3 in}
     \caption{ \pname{} hardware approximation tuning of the HD-Classification benchmark for the SpecPCM~\cite{SpecPCM2024} Phase Change Memory simulator. \pname{} effectively achieves over 4.5x performance improvements within 45 minutes of tuning (and simulation) time.}
     \label{fig:sim-speedup}
